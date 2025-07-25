@@ -1,0 +1,15 @@
+name: MikuServerPlugin
+version: '1.0.0'
+main: io.github.northzerod.mikuServerPlugin.MikuServerPlugin
+api-version: '1.21.8'
+prefix: MikuServerPlugin
+authors: [ NorthZero ]
+description: MikuServer专用插件
+website: https://northzerod.github.io/
+
+commands:
+  back:
+    description: "返回死亡地点"
+    usage: "Usage: /back"
+    aliases: [b, back]
+    permission: mikuserverplugin.command.back

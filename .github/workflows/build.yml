@@ -25,7 +25,7 @@ jobs:
       run: chmod +x gradlew
 
     - name: 构建项目（跳过测试）
-      run: ./gradlew build -x test
+      run: ./gradlew shadowJar
 
     - name: 上传构建产物（artifact）
       uses: actions/upload-artifact@v4

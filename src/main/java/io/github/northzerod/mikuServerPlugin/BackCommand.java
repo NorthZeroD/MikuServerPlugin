@@ -1,40 +1,82 @@
 package io.github.northzerod.mikuServerPlugin;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
+import com.mojang.brigadier.Command;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.tree.LiteralCommandNode;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import io.papermc.paper.command.brigadier.Commands;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
-import org.bukkit.scoreboard.Score;
-import org.jetbrains.annotations.NotNull;
 
-public final class BackCommand implements CommandExecutor {
+public final class BackCommand {
+    public static LiteralCommandNode<CommandSourceStack> getNode() {
+        LiteralArgumentBuilder<CommandSourceStack> back = Commands.literal("back")
+                .executes(
+                        ctx -> {
+                            if (ctx.getSource().getExecutor() instanceof Player player) {
+                                String uuid = player.getUniqueId().toString();
+                                Location lastDeathLocation = player.getLastDeathLocation();
+                                int isUsedBack = 0;
+                                isUsedBack = DatabaseManager.query(
+                                        "SELECT value FROM is_used_back WHERE uuid = ?",
+                                        rs -> {
+                                            if (rs.next()) {
+                                                return rs.getInt("value");
+                                            }
+                                            return 1;
+                                        },
+                                        uuid
+                                );
 
-    @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String @NotNull [] args) {
-        if (args.length == 0) {
-            if (sender instanceof Player player) {
-                if (player.getLastDeathLocation() != null) {
-                    Score score = MikuServerPlugin.isUsedBackObj.getScore(player.getUniqueId().toString());
 
-                    if (score.getScore() == 1) {
-                        player.sendMessage(Component.text("你已经返回过死亡点了!", NamedTextColor.YELLOW));
-                        return true;
-                    }
+                                if (isUsedBack == 1) {
+                                    player.sendRichMessage("<gold>你已经回到过上次死亡地点了");
+                                    return Command.SINGLE_SUCCESS;
+                                }
 
-                    // 成功执行
-                    player.teleport(player.getLastDeathLocation());
-                    score.setScore(1);
-                    return true;
-                }
-                player.sendMessage(Component.text("执行失败, player.getLastDeathLocation() == null", NamedTextColor.RED));
-                return true;
-            }
-            sender.sendMessage(Component.text("执行失败, 命令发送者不是玩家", NamedTextColor.RED));
-            return true;
-        }
-        sender.sendMessage(Component.text("执行失败, 语法错误", NamedTextColor.RED));
-        return false;
+                                if (lastDeathLocation == null) {
+                                    player.sendRichMessage("<red>执行失败: lastDeathLocation == null");
+                                    return Command.SINGLE_SUCCESS;
+                                }
+
+                                player.teleport(lastDeathLocation);
+                                DatabaseManager.executeUpdate("UPDATE is_used_back SET value = 1 WHERE uuid = ?", uuid);
+                                player.sendRichMessage("<green>你已回到上次死亡地点");
+                                return Command.SINGLE_SUCCESS;
+                            }
+
+                            ctx.getSource().getSender().sendPlainMessage("执行失败: 此命令需要一个玩家");
+                            return Command.SINGLE_SUCCESS;
+                        }
+                )
+                .requires(sender ->
+                        sender.getSender().isOp() || sender.getSender().hasPermission("mikuserverplugin.command.back")
+                );
+
+        LiteralArgumentBuilder<CommandSourceStack> info = Commands.literal("info")
+                .executes(
+                        ctx -> {
+                            if (ctx.getSource().getExecutor() instanceof Player player) {
+                                Location lastDeathLocation = player.getLastDeathLocation();
+
+                                if (lastDeathLocation == null) {
+                                    player.sendRichMessage("<red>执行失败: lastDeathLocation == null");
+                                    return Command.SINGLE_SUCCESS;
+                                }
+
+                                player.sendRichMessage("<green>" + player.getLastDeathLocation().toString());
+                                return Command.SINGLE_SUCCESS;
+                            }
+
+                            ctx.getSource().getSender().sendPlainMessage("执行失败: 此命令需要一个玩家");
+                            return Command.SINGLE_SUCCESS;
+                        }
+                )
+                .requires(sender ->
+                        sender.getSender().isOp() || sender.getSender().hasPermission("mikuserverplugin.command.back.info")
+                );
+
+        back.then(info);
+        return back.build();
     }
 }

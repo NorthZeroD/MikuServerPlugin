@@ -1,10 +1,11 @@
 plugins {
     id 'java'
     id("xyz.jpenilla.run-paper") version "2.3.1"
+    id 'com.gradleup.shadow' version '8.3.8'
 }
 
 group = 'io.github.northzerod'
-version = '1.0.0'
+version = '2.0.0'
 
 repositories {
     mavenCentral()
@@ -20,7 +21,19 @@ repositories {
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT")
+    implementation 'com.zaxxer:HikariCP:7.0.0'
 }
+
+// 添加 shadowJar 配置
+shadowJar {
+    relocate 'com.zaxxer.hikari', 'io.github.northzerod.mikuServerPlugin.libs.hikari'
+
+    minimize() // 可选：减小 JAR 文件大小
+    archiveClassifier.set('') // 替换默认的 JAR 文件
+}
+
+// 确保 build 任务依赖于 shadowJar
+tasks.build.dependsOn tasks.shadowJar
 
 tasks {
     runServer {
